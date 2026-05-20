@@ -1,0 +1,22 @@
+version: '3.8'
+services:
+  db:
+    image: ankane/pgvector:latest # Образ PostgreSQL с поддержкой AI-векторов
+    container_name: carpenter_crm_db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: crm_password_2026
+      POSTGRES_DB: carpenter_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d carpenter_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

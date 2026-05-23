@@ -1,18 +1,51 @@
 import os
 import sys
+sys.path.insert(0, os.path.dirname(__file__))
 import platform
 from importlib.metadata import distributions
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from dotenv import load_dotenv
-from database import get_db
+from typing import List
+from database import get_db, engine
+import models
+import schemas
 
 # Загружаем переменные окружения
-load_dotenv(".env.local")
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env.local"))
+
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Carpenter CRM API", version="0.1.0")
+
+@app.post("/api/leads", response_model=schemas.LeadResponse)
+def create_lead(lead: schemas.LeadCreate, db: Session = Depends(get_db)):
+    db_lead = models.Lead(**lead.model_dump())
+    db.add(db_lead)
+    db.commit()
+    db.refresh(db_lead)
+    return db_lead
+
+@app.get("/api/leads", response_model=List[schemas.LeadResponse])
+def get_leads(db: Session = Depends(get_db)):
+    current_role = os.getenv("CURRENT_ROLE", "UNKNOWN")
+    if current_role != "DIRECTOR":
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return db.query(models.Lead).order_by(models.Lead.id.desc()).all()
+
+@app.delete("/api/leads/{lead_id}")
+def delete_lead(lead_id: int, db: Session = Depends(get_db)):
+    current_role = os.getenv("CURRENT_ROLE", "UNKNOWN")
+    if current_role != "DIRECTOR":
+        raise HTTPException(status_code=403, detail="Forbidden")
+    db_lead = db.query(models.Lead).filter(models.Lead.id == lead_id).first()
+    if not db_lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    db.delete(db_lead)
+    db.commit()
+    return {"status": "ok"}
 
 @app.get("/api/health")
 def health_check(db: Session = Depends(get_db)):

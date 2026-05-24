@@ -128,6 +128,12 @@
         .badge-status-sent { background-color: #e8f5e9; color: #388e3c; border: 1px solid #c8e6c9; }
         .badge-status-agreement { background-color: #f3e5f5; color: #7b1fa2; border: 1px solid #e1bee7; }
         .badge-status-rejection { background-color: #ffebee; color: #d32f2f; border: 1px solid #ffcdd2; }
+        /* Client-specific Status Badges (Срез №2) */
+        .badge-status-prepayment { background-color: #e0f2f1; color: #00695c; border: 1px solid #b2dfdb; }
+        .badge-status-in-production { background-color: #fff8e1; color: #f9a825; border: 1px solid #fff59d; }
+        .badge-status-paid { background-color: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+        .badge-status-closed { background-color: #eceff1; color: #546e7a; border: 1px solid #cfd8dc; }
+        .badge-status-archive { background-color: #f5f5f5; color: #9e9e9e; border: 1px solid #e0e0e0; }
         
         /* Buttons and Inputs */
         .header-actions {
@@ -243,6 +249,39 @@
                     <tbody id="leadsTableBody">
                         <tr>
                             <td colspan="7" style="text-align: center; padding: 30px; color: #7f8c8d;">Загрузка лидов...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="leads-table-container">
+            <h1>Carpenter CRM - Срез №2 (Модуль Клиентов)</h1>
+            <div class="header-actions">
+                <p style="margin: 0;">Карточки клиентов, конвертированных из лидов. Данные из БД PostgreSQL.</p>
+                <div style="display: flex; align-items: center;">
+                    <span id="clientActionStatus" class="action-status"></span>
+                    <button class="btn btn-primary" onclick="convertLeadRow()" style="margin-left: 15px;">+ Конвертировать лид</button>
+                </div>
+            </div>
+            <div class="detail-card" style="padding: 0; overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Имя клиента</th>
+                            <th>Телефон</th>
+                            <th>Email</th>
+                            <th>Источник</th>
+                            <th>Статус</th>
+                            <th>Из лида</th>
+                            <th>Дата создания</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="clientsTableBody">
+                        <tr>
+                            <td colspan="9" style="text-align: center; padding: 30px; color: #7f8c8d;">Загрузка клиентов...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -507,8 +546,176 @@
             });
         }
         
-        // Запускаем загрузку лидов
+        // === Модуль Клиентов (Срез №2) ===
+
+        function getClientStatusClass(status) {
+            switch (status) {
+                case 'новый запрос': return 'badge-status-new';
+                case 'просчет / КП': return 'badge-status-calculation';
+                case 'КП отправлено': return 'badge-status-sent';
+                case 'согласование': return 'badge-status-agreement';
+                case 'предоплата': return 'badge-status-prepayment';
+                case 'передан в производство': return 'badge-status-in-production';
+                case 'оплачен полностью': return 'badge-status-paid';
+                case 'закрыт': return 'badge-status-closed';
+                case 'отказ': return 'badge-status-rejection';
+                case 'архив': return 'badge-status-archive';
+                default: return 'badge-source';
+            }
+        }
+
+        function setClientActionStatus(message, type) {
+            const statusEl = document.getElementById('clientActionStatus');
+            statusEl.textContent = message;
+            statusEl.className = 'action-status ' + type;
+            if (type === 'success' || type === 'error') {
+                setTimeout(() => { statusEl.textContent = ''; }, 4000);
+            }
+        }
+
+        function fetchClients() {
+            fetch('/api/clients')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Ошибка ' + response.status + ': ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const tbody = document.getElementById('clientsTableBody');
+                    tbody.innerHTML = '';
+
+                    if (data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 30px;">Нет данных о клиентах</td></tr>';
+                        return;
+                    }
+
+                    data.forEach(client => {
+                        const dateObj = new Date(client.created_at);
+                        const dateStr = dateObj.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit' });
+                        const statusClass = getClientStatusClass(client.status);
+                        const leadInfo = client.lead_id ? `#${client.lead_id}` : 'вручную';
+                        const emailDisplay = client.email || '—';
+
+                        tbody.innerHTML += `
+                            <tr>
+                                <td style="font-weight: 500; color: #7f8c8d;">#${client.id}</td>
+                                <td><strong>${client.name}</strong></td>
+                                <td>${client.phone}</td>
+                                <td style="color: #7f8c8d; font-size: 13px;">${emailDisplay}</td>
+                                <td><span class="badge badge-source">${client.source}</span></td>
+                                <td><span class="badge ${statusClass}">${client.status}</span></td>
+                                <td style="font-weight: 500; color: #7f8c8d; font-size: 13px;">${leadInfo}</td>
+                                <td style="color: #7f8c8d; font-size: 13px;">${dateStr}</td>
+                                <td>
+                                    <button class="btn-icon" onclick="deleteClient(${client.id}, this)" title="Удалить">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="3 6 5 6 21 6"></polyline>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                            <line x1="10" y1="11" x2="10" y2="17"></line>
+                                            <line x1="14" y1="11" x2="14" y2="17"></line>
+                                        </svg>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                })
+                .catch(error => {
+                    const tbody = document.getElementById('clientsTableBody');
+                    tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 30px; color: #e74c3c;">Ошибка загрузки клиентов: ${error.message}</td></tr>`;
+                });
+        }
+
+        function convertLeadRow() {
+            const tbody = document.getElementById('clientsTableBody');
+
+            // Убираем плейсхолдер "Нет данных", если он есть
+            if (tbody.querySelector('td[colspan="9"]')) {
+                tbody.innerHTML = '';
+            }
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="font-weight: 500; color: #7f8c8d;">Авто</td>
+                <td colspan="2"><input type="number" class="table-input" placeholder="ID лида" id="new_lead_id" min="1" style="width: 80px;"></td>
+                <td><input type="email" class="table-input" placeholder="Email" id="new_client_email"></td>
+                <td colspan="2"><input type="text" class="table-input" placeholder="Адрес (опц.)" id="new_client_address"></td>
+                <td colspan="2"><input type="text" class="table-input" placeholder="Комментарий (опц.)" id="new_client_comment"></td>
+                <td><button class="btn btn-success" onclick="saveClient(this)">Конвертировать</button></td>
+            `;
+            tbody.insertBefore(tr, tbody.firstChild);
+        }
+
+        function saveClient(btn) {
+            const tr = btn.closest('tr');
+            const leadId = parseInt(tr.querySelector('#new_lead_id').value);
+            const email = tr.querySelector('#new_client_email').value.trim() || null;
+            const address = tr.querySelector('#new_client_address').value.trim() || null;
+            const comment = tr.querySelector('#new_client_comment').value.trim() || null;
+
+            if (!leadId) {
+                setClientActionStatus('Ошибка: Укажите ID лида', 'error');
+                return;
+            }
+
+            setClientActionStatus('Конвертация...', 'loading');
+
+            const payload = { lead_id: leadId };
+            if (email) payload.email = email;
+            if (address) payload.address = address;
+            if (comment) payload.comment = comment;
+
+            fetch('/api/clients', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw new Error(err.detail || JSON.stringify(err)); });
+                }
+                return response.json();
+            })
+            .then(client => {
+                setClientActionStatus('Клиент создан!', 'success');
+                // Обновляем обе таблицы
+                fetchClients();
+                fetchLeads();
+            })
+            .catch(error => {
+                setClientActionStatus('Ошибка: ' + error.message, 'error');
+            });
+        }
+
+        function deleteClient(id, btn) {
+            if (!confirm('Вы уверены, что хотите удалить этого клиента?')) {
+                return;
+            }
+
+            setClientActionStatus('Удаление...', 'loading');
+
+            fetch('/api/clients/' + id, { method: 'DELETE' })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw new Error(JSON.stringify(err)); });
+                }
+                btn.closest('tr').remove();
+                setClientActionStatus('Клиент удалён!', 'success');
+
+                const tbody = document.getElementById('clientsTableBody');
+                if (tbody.children.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 30px;">Нет данных о клиентах</td></tr>';
+                }
+            })
+            .catch(error => {
+                setClientActionStatus('Ошибка удаления: ' + error.message, 'error');
+            });
+        }
+
+        // Запускаем загрузку лидов и клиентов
         fetchLeads();
+        fetchClients();
     </script>
 </body>
 </html>

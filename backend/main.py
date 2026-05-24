@@ -18,7 +18,7 @@ load_dotenv(os.path.join(os.path.dirname(__file__), ".env.local"))
 
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Carpenter CRM API", version="0.1.0")
+app = FastAPI(title="Carpenter CRM API", version="0.2.0")
 
 @app.post("/api/leads", response_model=schemas.LeadResponse)
 def create_lead(lead: schemas.LeadCreate, db: Session = Depends(get_db)):
@@ -44,6 +44,59 @@ def delete_lead(lead_id: int, db: Session = Depends(get_db)):
     if not db_lead:
         raise HTTPException(status_code=404, detail="Lead not found")
     db.delete(db_lead)
+    db.commit()
+    return {"status": "ok"}
+
+# --- Клиенты (Срез №2) ---
+
+@app.post("/api/clients", response_model=schemas.ClientResponse, status_code=201)
+def create_client(client_data: schemas.ClientCreate, db: Session = Depends(get_db)):
+    current_role = os.getenv("CURRENT_ROLE", "UNKNOWN")
+    if current_role != "DIRECTOR":
+        raise HTTPException(status_code=403, detail="Forbidden")
+    # Находим лид
+    db_lead = db.query(models.Lead).filter(models.Lead.id == client_data.lead_id).first()
+    if not db_lead:
+        raise HTTPException(status_code=404, detail="Лид не найден")
+    # Проверяем, что лид ещё не конвертирован
+    existing_client = db.query(models.Client).filter(models.Client.lead_id == client_data.lead_id).first()
+    if existing_client:
+        raise HTTPException(status_code=409, detail="Этот лид уже конвертирован в клиента")
+    # Создаём клиента из данных лида
+    db_client = models.Client(
+        name=db_lead.client_name,
+        phone=db_lead.phone,
+        email=client_data.email,
+        address=client_data.address,
+        source=db_lead.source,
+        status=models.ClientStatus.AGREEMENT,
+        comment=client_data.comment,
+        lead_id=db_lead.id
+    )
+    db.add(db_client)
+    # Обновляем статус лида
+    if db_lead.status in (models.LeadStatus.NEW, models.LeadStatus.CALCULATION, models.LeadStatus.SENT):
+        db_lead.status = models.LeadStatus.AGREEMENT
+    db.commit()
+    db.refresh(db_client)
+    return db_client
+
+@app.get("/api/clients", response_model=List[schemas.ClientResponse])
+def get_clients(db: Session = Depends(get_db)):
+    current_role = os.getenv("CURRENT_ROLE", "UNKNOWN")
+    if current_role != "DIRECTOR":
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return db.query(models.Client).order_by(models.Client.id.desc()).all()
+
+@app.delete("/api/clients/{client_id}")
+def delete_client(client_id: int, db: Session = Depends(get_db)):
+    current_role = os.getenv("CURRENT_ROLE", "UNKNOWN")
+    if current_role != "DIRECTOR":
+        raise HTTPException(status_code=403, detail="Forbidden")
+    db_client = db.query(models.Client).filter(models.Client.id == client_id).first()
+    if not db_client:
+        raise HTTPException(status_code=404, detail="Клиент не найден")
+    db.delete(db_client)
     db.commit()
     return {"status": "ok"}
 
@@ -91,4 +144,4 @@ def health_check(db: Session = Depends(get_db)):
 def serve_frontend():
     # Путь относителен запуска из папки backend/
     html_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "index.html")
-    return FileResponse(html_path)
+    return FileResponse(html_path, headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"})

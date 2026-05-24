@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict
-from datetime import datetime
-from models import LeadSource, LeadStatus, ClientStatus
+from datetime import datetime, date
+from models import LeadSource, LeadStatus, ClientStatus, OrderStatus
 
 class LeadBase(BaseModel):
     client_name: str
@@ -43,5 +43,30 @@ class ClientResponse(ClientBase):
     id: int
     lead_id: int | None
     created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+# --- Заказы (Срез №3) ---
+
+class OrderBase(BaseModel):
+    product_type: str
+    technical_spec: str | None = None
+    price: float
+    status: OrderStatus = OrderStatus.ACCEPTED
+    delivery_date: date | None = None
+    installation_date: date | None = None
+
+class OrderCreate(OrderBase):
+    client_id: int
+
+class OrderStatusUpdate(BaseModel):
+    status: OrderStatus
+
+class OrderResponse(OrderBase):
+    id: int
+    client_id: int
+    paid_amount: float
+    created_at: datetime
+    client_name: str | None = None  # Опционально для удобства отображения на UI
 
     model_config = ConfigDict(from_attributes=True)

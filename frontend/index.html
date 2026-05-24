@@ -132,8 +132,21 @@
         .badge-status-prepayment { background-color: #e0f2f1; color: #00695c; border: 1px solid #b2dfdb; }
         .badge-status-in-production { background-color: #fff8e1; color: #f9a825; border: 1px solid #fff59d; }
         .badge-status-paid { background-color: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
-        .badge-status-closed { background-color: #eceff1; color: #546e7a; border: 1px solid #cfd8dc; }
         .badge-status-archive { background-color: #f5f5f5; color: #9e9e9e; border: 1px solid #e0e0e0; }
+        
+        /* Order-specific Status Badges (Срез №3) */
+        .badge-status-accepted { background-color: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
+        .badge-status-awaiting-payment { background-color: #fff8e1; color: #ff8f00; border: 1px solid #ffe082; }
+        .badge-status-agreed { background-color: #f3e5f5; color: #6a1b9a; border: 1px solid #ce93d8; }
+        .badge-status-in-production-queue { background-color: #e8eaf6; color: #283593; border: 1px solid #9fa8da; }
+        .badge-status-awaiting-materials { background-color: #efebe9; color: #4e342e; border: 1px solid #bcaaa4; }
+        .badge-status-in-production { background-color: #e0f2f1; color: #00695c; border: 1px solid #80cbc4; }
+        .badge-status-ready { background-color: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+        .badge-status-delivering { background-color: #e0f7fa; color: #00838f; border: 1px solid #80deea; }
+        .badge-status-handed-over { background-color: #f1f8e9; color: #558b2f; border: 1px solid #c5e1a5; }
+        .badge-status-closed { background-color: #eceff1; color: #37474f; border: 1px solid #b0bec5; }
+        .badge-status-suspended { background-color: #fafafa; color: #616161; border: 1px solid #e0e0e0; }
+        .badge-status-problem { background-color: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
         
         /* Buttons and Inputs */
         .header-actions {
@@ -282,6 +295,39 @@
                     <tbody id="clientsTableBody">
                         <tr>
                             <td colspan="9" style="text-align: center; padding: 30px; color: #7f8c8d;">Загрузка клиентов...</td>
+                        </tr>
+                    </tbody>
+                </table>
+        </div>
+
+        <div class="leads-table-container">
+            <h1>Carpenter CRM - Срез №3 (Модуль Заказов)</h1>
+            <div class="header-actions">
+                <p style="margin: 0;">Управление заказами и проектами клиентов столярного производства.</p>
+                <div style="display: flex; align-items: center;">
+                    <span id="orderActionStatus" class="action-status"></span>
+                    <button class="btn btn-primary" onclick="addNewOrderRow()" style="margin-left: 15px;">+ Новый заказ</button>
+                </div>
+            </div>
+            <div class="detail-card" style="padding: 0; overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Клиент</th>
+                            <th>Изделие/Работы</th>
+                            <th>Техническое описание (ТЗ)</th>
+                            <th>Стоимость (руб.)</th>
+                            <th>Оплачено</th>
+                            <th>Статус заказа</th>
+                            <th>Сроки (Доставка / Монтаж)</th>
+                            <th>Создан</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTableBody">
+                        <tr>
+                            <td colspan="10" style="text-align: center; padding: 30px; color: #7f8c8d;">Загрузка заказов...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -582,6 +628,7 @@
                     return response.json();
                 })
                 .then(data => {
+                    window.allClients = data;
                     const tbody = document.getElementById('clientsTableBody');
                     tbody.innerHTML = '';
 
@@ -713,9 +760,278 @@
             });
         }
 
+        // === Модуль Заказов (Срез №3) ===
+
+        function getOrderStatusClass(status) {
+            switch (status) {
+                case 'принят': return 'badge-status-accepted';
+                case 'ожидает оплаты': return 'badge-status-awaiting-payment';
+                case 'согласован': return 'badge-status-agreed';
+                case 'передан в производство': return 'badge-status-in-production-queue';
+                case 'ожидает материалы': return 'badge-status-awaiting-materials';
+                case 'в производстве': return 'badge-status-in-production';
+                case 'готов': return 'badge-status-ready';
+                case 'на доставке': return 'badge-status-delivering';
+                case 'сдан клиенту': return 'badge-status-handed-over';
+                case 'закрыт': return 'badge-status-closed';
+                case 'приостановлен': return 'badge-status-suspended';
+                case 'проблемный': return 'badge-status-problem';
+                default: return 'badge-source';
+            }
+        }
+
+        const ORDER_STATUSES = [
+            'принят', 'ожидает оплаты', 'согласован', 'передан в производство',
+            'ожидает материалы', 'в производстве', 'готов', 'на доставке',
+            'сдан клиенту', 'закрыт', 'приостановлен', 'проблемный'
+        ];
+
+        function setOrderActionStatus(message, type) {
+            const statusEl = document.getElementById('orderActionStatus');
+            if (statusEl) {
+                statusEl.textContent = message;
+                statusEl.className = 'action-status ' + type;
+                if (type === 'success' || type === 'error') {
+                    setTimeout(() => { statusEl.textContent = ''; }, 4000);
+                }
+            }
+        }
+
+        function fetchOrders() {
+            fetch('/api/orders')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Ошибка ' + response.status + ': ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const tbody = document.getElementById('ordersTableBody');
+                    tbody.innerHTML = '';
+
+                    if (data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 30px;">Нет данных о заказах</td></tr>';
+                        return;
+                    }
+
+                    data.forEach(order => {
+                        const dateObj = new Date(order.created_at);
+                        const dateStr = dateObj.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute:'2-digit' });
+                        
+                        const deliveryStr = order.delivery_date ? new Date(order.delivery_date).toLocaleDateString('ru-RU') : '—';
+                        const installationStr = order.installation_date ? new Date(order.installation_date).toLocaleDateString('ru-RU') : '—';
+                        
+                        const statusClass = getOrderStatusClass(order.status);
+                        const clientName = order.client_name || `Клиент #${order.client_id}`;
+                        const techSpec = order.technical_spec || '—';
+
+                        // Формируем выпадающий список для изменения статуса прямо в таблице
+                        let statusSelectHtml = `<select class="table-select ${statusClass}" onchange="updateOrderStatus(${order.id}, this.value, this)" style="font-weight: 500; border-radius: 4px; padding: 4px 8px; border: 1px solid #ccc; cursor: pointer; width: 100%;">`;
+                        ORDER_STATUSES.forEach(st => {
+                            const selected = order.status === st ? 'selected' : '';
+                            statusSelectHtml += `<option value="${st}" ${selected}>${st}</option>`;
+                        });
+                        statusSelectHtml += `</select>`;
+
+                        tbody.innerHTML += `
+                            <tr>
+                                <td style="font-weight: 500; color: #7f8c8d;">#${order.id}</td>
+                                <td><strong>${clientName}</strong></td>
+                                <td>${order.product_type}</td>
+                                <td style="font-size: 13px; color: #555; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${techSpec}">${techSpec}</td>
+                                <td style="font-weight: 600;">${order.price.toLocaleString('ru-RU')} ₽</td>
+                                <td style="color: #27ae60; font-weight: 500;">${order.paid_amount.toLocaleString('ru-RU')} ₽</td>
+                                <td>${statusSelectHtml}</td>
+                                <td style="font-size: 13px; color: #555;">
+                                    Дост: ${deliveryStr}<br>
+                                    Монт: ${installationStr}
+                                </td>
+                                <td style="color: #7f8c8d; font-size: 13px;">${dateStr}</td>
+                                <td>
+                                    <button class="btn-icon" onclick="deleteOrder(${order.id}, this)" title="Удалить">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="3 6 5 6 21 6"></polyline>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                            <line x1="10" y1="11" x2="10" y2="17"></line>
+                                            <line x1="14" y1="11" x2="14" y2="17"></line>
+                                        </svg>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                })
+                .catch(error => {
+                    const tbody = document.getElementById('ordersTableBody');
+                    tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 30px; color: #e74c3c;">Ошибка загрузки заказов: ${error.message}</td></tr>`;
+                });
+        }
+
+        function updateOrderStatus(orderId, newStatus, selectEl) {
+            setOrderActionStatus('Обновление статуса...', 'loading');
+            
+            fetch(`/api/orders/${orderId}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw new Error(JSON.stringify(err)); });
+                }
+                return response.json();
+            })
+            .then(data => {
+                setOrderActionStatus('Статус успешно изменен!', 'success');
+                // Обновляем класс select для цветового индикатора
+                selectEl.className = `table-select ${getOrderStatusClass(newStatus)}`;
+            })
+            .catch(error => {
+                setOrderActionStatus('Ошибка изменения статуса: ' + error.message, 'error');
+                fetchOrders(); // Перезагружаем в случае ошибки
+            });
+        }
+
+        function addNewOrderRow() {
+            const tbody = document.getElementById('ordersTableBody');
+            
+            if (tbody.querySelector('td[colspan="10"]')) {
+                tbody.innerHTML = '';
+            }
+
+            if (!window.allClients || window.allClients.length === 0) {
+                setOrderActionStatus('Ошибка: Нет клиентов для создания заказа. Создайте сначала клиента.', 'error');
+                return;
+            }
+
+            // Формируем список клиентов для выбора
+            let clientOptions = '';
+            window.allClients.forEach(c => {
+                clientOptions += `<option value="${c.id}">${c.name} (${c.phone})</option>`;
+            });
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="font-weight: 500; color: #7f8c8d;">Авто</td>
+                <td>
+                    <select class="table-select" id="new_order_client_id" style="width: 150px;">
+                        ${clientOptions}
+                    </select>
+                </td>
+                <td><input type="text" class="table-input" placeholder="Изделие" id="new_order_product_type"></td>
+                <td><input type="text" class="table-input" placeholder="ТЗ / Описание" id="new_order_tech_spec"></td>
+                <td><input type="number" class="table-input" placeholder="Цена" id="new_order_price" min="0" style="width: 100px;"></td>
+                <td style="color: #7f8c8d;">0 ₽</td>
+                <td>
+                    <select class="table-select badge-status-accepted" id="new_order_status" style="width: 100%;">
+                        <option value="принят" selected>принят</option>
+                        <option value="ожидает оплаты">ожидает оплаты</option>
+                        <option value="согласован">согласован</option>
+                        <option value="передан в производство">передан в производство</option>
+                        <option value="ожидает материалы">ожидает материалы</option>
+                        <option value="в производстве">в производстве</option>
+                        <option value="готов">готов</option>
+                        <option value="на доставке">на доставке</option>
+                        <option value="сдан клиенту">сдан клиенту</option>
+                        <option value="закрыт">закрыт</option>
+                        <option value="приостановлен">приостановлен</option>
+                        <option value="проблемный">проблемный</option>
+                    </select>
+                </td>
+                <td>
+                    <span style="font-size: 11px; color:#666;">Доставка:</span>
+                    <input type="date" class="table-input" id="new_order_delivery_date" style="font-size: 11px; padding: 2px; margin-bottom: 2px;">
+                    <span style="font-size: 11px; color:#666;">Монтаж:</span>
+                    <input type="date" class="table-input" id="new_order_installation_date" style="font-size: 11px; padding: 2px;">
+                </td>
+                <td style="color: #7f8c8d; font-size: 13px;">Сейчас</td>
+                <td><button class="btn btn-success" onclick="saveOrder(this)">Сохранить</button></td>
+            `;
+            tbody.insertBefore(tr, tbody.firstChild);
+
+            // Добавим обработчик изменения статуса для новой строки, чтобы красить select
+            const statusSelect = tr.querySelector('#new_order_status');
+            statusSelect.addEventListener('change', function() {
+                statusSelect.className = `table-select ${getOrderStatusClass(this.value)}`;
+            });
+        }
+
+        function saveOrder(btn) {
+            const tr = btn.closest('tr');
+            const clientId = parseInt(tr.querySelector('#new_order_client_id').value);
+            const productType = tr.querySelector('#new_order_product_type').value.trim();
+            const techSpec = tr.querySelector('#new_order_tech_spec').value.trim() || null;
+            const price = parseFloat(tr.querySelector('#new_order_price').value);
+            const status = tr.querySelector('#new_order_status').value;
+            const deliveryDate = tr.querySelector('#new_order_delivery_date').value || null;
+            const installationDate = tr.querySelector('#new_order_installation_date').value || null;
+
+            if (!productType || isNaN(price)) {
+                setOrderActionStatus('Ошибка: Укажите изделие и корректную цену', 'error');
+                return;
+            }
+
+            setOrderActionStatus('Сохранение заказа...', 'loading');
+
+            const payload = {
+                client_id: clientId,
+                product_type: productType,
+                technical_spec: techSpec,
+                price: price,
+                status: status,
+                delivery_date: deliveryDate,
+                installation_date: installationDate
+            };
+
+            fetch('/api/orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw new Error(JSON.stringify(err)); });
+                }
+                return response.json();
+            })
+            .then(order => {
+                setOrderActionStatus('Заказ успешно добавлен!', 'success');
+                fetchOrders();
+            })
+            .catch(error => {
+                setOrderActionStatus('Ошибка сохранения: ' + error.message, 'error');
+            });
+        }
+
+        function deleteOrder(id, btn) {
+            if (!confirm('Вы уверены, что хотите удалить этот заказ?')) {
+                return;
+            }
+
+            setOrderActionStatus('Удаление заказа...', 'loading');
+
+            fetch('/api/orders/' + id, { method: 'DELETE' })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw new Error(JSON.stringify(err)); });
+                }
+                btn.closest('tr').remove();
+                setOrderActionStatus('Заказ успешно удален!', 'success');
+                
+                const tbody = document.getElementById('ordersTableBody');
+                if (tbody.children.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 30px;">Нет данных о заказах</td></tr>';
+                }
+            })
+            .catch(error => {
+                setOrderActionStatus('Ошибка удаления: ' + error.message, 'error');
+            });
+        }
+
         // Запускаем загрузку лидов и клиентов
         fetchLeads();
         fetchClients();
+        fetchOrders();
     </script>
 </body>
 </html>

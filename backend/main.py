@@ -100,6 +100,53 @@ def delete_client(client_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"status": "ok"}
 
+# --- Заказы (Срез №3) ---
+
+@app.post("/api/orders", response_model=schemas.OrderResponse, status_code=201)
+def create_order(order_data: schemas.OrderCreate, db: Session = Depends(get_db)):
+    # Проверяем, существует ли клиент
+    db_client = db.query(models.Client).filter(models.Client.id == order_data.client_id).first()
+    if not db_client:
+        raise HTTPException(status_code=404, detail="Клиент не найден")
+    
+    db_order = models.Order(**order_data.model_dump())
+    db.add(db_order)
+    db.commit()
+    db.refresh(db_order)
+    return db_order
+
+@app.get("/api/orders", response_model=List[schemas.OrderResponse])
+def get_orders(db: Session = Depends(get_db)):
+    current_role = os.getenv("CURRENT_ROLE", "UNKNOWN")
+    if current_role != "DIRECTOR":
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return db.query(models.Order).order_by(models.Order.id.desc()).all()
+
+@app.patch("/api/orders/{order_id}/status", response_model=schemas.OrderResponse)
+def update_order_status(order_id: int, status_data: schemas.OrderStatusUpdate, db: Session = Depends(get_db)):
+    db_order = db.query(models.Order).filter(models.Order.id == order_id).first()
+    if not db_order:
+        raise HTTPException(status_code=404, detail="Заказ не найден")
+    
+    db_order.status = status_data.status
+    db.commit()
+    db.refresh(db_order)
+    return db_order
+
+@app.delete("/api/orders/{order_id}")
+def delete_order(order_id: int, db: Session = Depends(get_db)):
+    current_role = os.getenv("CURRENT_ROLE", "UNKNOWN")
+    if current_role != "DIRECTOR":
+        raise HTTPException(status_code=403, detail="Forbidden")
+    
+    db_order = db.query(models.Order).filter(models.Order.id == order_id).first()
+    if not db_order:
+        raise HTTPException(status_code=404, detail="Заказ не найден")
+    
+    db.delete(db_order)
+    db.commit()
+    return {"status": "ok"}
+
 @app.get("/api/health")
 def health_check(db: Session = Depends(get_db)):
     db_status = "error"

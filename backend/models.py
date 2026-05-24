@@ -1,7 +1,8 @@
 import enum
 from datetime import datetime, timezone
 # pyrefly: ignore [missing-import]
-from sqlalchemy import Column, Integer, String, Enum as SQLAlchemyEnum, DateTime, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, Enum as SQLAlchemyEnum, DateTime, ForeignKey, Text, Date, Float
+from sqlalchemy.orm import relationship
 from database import Base
 
 class LeadSource(str, enum.Enum):
@@ -56,3 +57,39 @@ class Client(Base):
     comment = Column(Text, nullable=True)
     lead_id = Column(Integer, ForeignKey("leads.id"), nullable=True, unique=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    orders = relationship("Order", back_populates="client", cascade="all, delete-orphan")
+
+class OrderStatus(str, enum.Enum):
+    ACCEPTED = "принят"
+    AWAITING_PAYMENT = "ожидает оплаты"
+    AGREED = "согласован"
+    IN_PRODUCTION_QUEUE = "передан в производство"
+    AWAITING_MATERIALS = "ожидает материалы"
+    IN_PRODUCTION = "в производстве"
+    READY = "готов"
+    DELIVERING = "на доставке"
+    HANDED_OVER = "сдан клиенту"
+    CLOSED = "закрыт"
+    SUSPENDED = "приостановлен"
+    PROBLEM = "проблемный"
+
+class Order(Base):
+    __tablename__ = "orders"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False)
+    product_type = Column(String, nullable=False)
+    technical_spec = Column(Text, nullable=True)
+    price = Column(Float, nullable=False)
+    paid_amount = Column(Float, nullable=False, default=0.0)
+    status = Column(SQLAlchemyEnum(OrderStatus), nullable=False, default=OrderStatus.ACCEPTED)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    delivery_date = Column(Date, nullable=True)
+    installation_date = Column(Date, nullable=True)
+
+    client = relationship("Client", back_populates="orders")
+
+    @property
+    def client_name(self):
+        return self.client.name if self.client else None

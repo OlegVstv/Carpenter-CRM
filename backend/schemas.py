@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime, date
-from models import LeadSource, LeadStatus, ClientStatus, OrderStatus
+from models import LeadSource, LeadStatus, ClientStatus, OrderStatus, TaskPriority, TaskStatus
 
 class LeadBase(BaseModel):
     client_name: str
@@ -70,3 +70,28 @@ class OrderResponse(OrderBase):
     client_name: str | None = None  # Опционально для удобства отображения на UI
 
     model_config = ConfigDict(from_attributes=True)
+
+# --- Задачи (Срез №4) ---
+
+class TaskBase(BaseModel):
+    title: str
+    description: str | None = None
+    due_date: date | None = None
+    priority: TaskPriority
+    status: TaskStatus = TaskStatus.TODO
+    assigned_to: str = "DIRECTOR"
+    order_id: int | None = None
+
+class TaskCreate(TaskBase):
+    pass
+
+class TaskStatusUpdate(BaseModel):
+    status: TaskStatus
+
+class TaskResponse(TaskBase):
+    id: int
+    created_at: datetime
+    order_product_type: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+

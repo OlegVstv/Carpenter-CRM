@@ -89,7 +89,40 @@ class Order(Base):
     installation_date = Column(Date, nullable=True)
 
     client = relationship("Client", back_populates="orders")
+    tasks = relationship("Task", back_populates="order", cascade="all, delete-orphan")
 
     @property
     def client_name(self):
         return self.client.name if self.client else None
+
+class TaskPriority(str, enum.Enum):
+    LOW = "низкий"
+    MEDIUM = "средний"
+    HIGH = "высокий"
+    CRITICAL = "критический"
+
+class TaskStatus(str, enum.Enum):
+    TODO = "нужно сделать"
+    IN_PROGRESS = "в процессе"
+    DONE = "выполнено"
+    CANCELLED = "отменено"
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=True)
+    due_date = Column(Date, nullable=True)
+    priority = Column(SQLAlchemyEnum(TaskPriority), nullable=False)
+    status = Column(SQLAlchemyEnum(TaskStatus), nullable=False, default=TaskStatus.TODO)
+    assigned_to = Column(String, nullable=False, default="DIRECTOR")
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    order = relationship("Order", back_populates="tasks")
+
+    @property
+    def order_product_type(self):
+        return self.order.product_type if self.order else None
+

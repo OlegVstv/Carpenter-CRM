@@ -185,6 +185,63 @@ def health_check(db: Session = Depends(get_db)):
         },
         "libraries": packages_info
     }
+# --- Задачи (Срез №4) ---
+
+@app.post("/api/tasks", response_model=schemas.TaskResponse, status_code=201)
+def create_task(task_data: schemas.TaskCreate, db: Session = Depends(get_db)):
+    if task_data.order_id is not None:
+        db_order = db.query(models.Order).filter(models.Order.id == task_data.order_id).first()
+        if not db_order:
+            raise HTTPException(status_code=404, detail="Заказ не найден")
+    
+    db_task = models.Task(**task_data.model_dump())
+    db.add(db_task)
+    db.commit()
+    db.refresh(db_task)
+    return db_task
+
+@app.get("/api/tasks", response_model=List[schemas.TaskResponse])
+def get_tasks(
+    order_id: int | None = None,
+    status: models.TaskStatus | None = None,
+    db: Session = Depends(get_db)
+):
+    current_role = os.getenv("CURRENT_ROLE", "UNKNOWN")
+    if current_role != "DIRECTOR":
+        raise HTTPException(status_code=403, detail="Forbidden")
+    
+    query = db.query(models.Task)
+    if order_id is not None:
+        query = query.filter(models.Task.order_id == order_id)
+    if status is not None:
+        query = query.filter(models.Task.status == status)
+    
+    return query.order_by(models.Task.id.desc()).all()
+
+@app.patch("/api/tasks/{task_id}/status", response_model=schemas.TaskResponse)
+def update_task_status(task_id: int, status_data: schemas.TaskStatusUpdate, db: Session = Depends(get_db)):
+    db_task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not db_task:
+        raise HTTPException(status_code=404, detail="Задача не найдена")
+    
+    db_task.status = status_data.status
+    db.commit()
+    db.refresh(db_task)
+    return db_task
+
+@app.delete("/api/tasks/{task_id}")
+def delete_task(task_id: int, db: Session = Depends(get_db)):
+    current_role = os.getenv("CURRENT_ROLE", "UNKNOWN")
+    if current_role != "DIRECTOR":
+        raise HTTPException(status_code=403, detail="Forbidden")
+    
+    db_task = db.query(models.Task).filter(models.Task.id == task_id).first()
+    if not db_task:
+        raise HTTPException(status_code=404, detail="Задача не найдена")
+    
+    db.delete(db_task)
+    db.commit()
+    return {"status": "ok"}
 
 # Отдаем UI по корневому URL (без Next.js, просто статика)
 @app.get("/")

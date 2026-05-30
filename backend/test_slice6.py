@@ -3,10 +3,11 @@ import urllib.error
 import urllib.parse
 import json
 import sys
+from typing import Tuple, Any
 
 BASE = "http://localhost:8000/api"
 
-def make_request(url, data=None, method="GET"):
+def make_request(url: str, data: Any = None, method: str = "GET") -> Tuple[int, Any]:
     req = urllib.request.Request(
         url,
         data=json.dumps(data).encode("utf-8") if data is not None else None,

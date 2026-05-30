@@ -90,6 +90,8 @@ class Order(Base):
 
     client = relationship("Client", back_populates="orders")
     tasks = relationship("Task", back_populates="order", cascade="all, delete-orphan")
+    supply_requests = relationship("SupplyRequest", back_populates="order", cascade="all, delete-orphan")
+
 
     @property
     def client_name(self):
@@ -125,4 +127,61 @@ class Task(Base):
     @property
     def order_product_type(self):
         return self.order.product_type if self.order else None
+
+class Supplier(Base):
+    __tablename__ = "suppliers"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, nullable=False)
+    contact_person = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    email = Column(String, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+class Material(Base):
+    __tablename__ = "materials"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, nullable=False)
+    sku = Column(String, nullable=True)
+    unit = Column(String, nullable=False) # шт, м², м.п., литр
+    price = Column(Float, nullable=False, default=0.0)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    supply_requests = relationship("SupplyRequest", back_populates="material", cascade="all, delete-orphan")
+
+class SupplyRequestStatus(str, enum.Enum):
+    DRAFT = "черновик"
+    APPROVED = "согласовано"
+    ORDERED = "заказано"
+    DELIVERED = "получено"
+    CANCELLED = "отменено"
+
+class SupplyRequest(Base):
+    __tablename__ = "supply_requests"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=False)
+    material_id = Column(Integer, ForeignKey("materials.id"), nullable=False)
+    quantity = Column(Float, nullable=False)
+    actual_price = Column(Float, nullable=False)
+    status = Column(SQLAlchemyEnum(SupplyRequestStatus), nullable=False, default=SupplyRequestStatus.DRAFT)
+    delivery_date = Column(Date, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    order = relationship("Order", back_populates="supply_requests")
+    material = relationship("Material", back_populates="supply_requests")
+
+    @property
+    def material_name(self):
+        return self.material.name if self.material else None
+
+    @property
+    def order_product_type(self):
+        return self.order.product_type if self.order else None
+
+    @property
+    def client_name(self):
+        return self.order.client.name if self.order and self.order.client else None
+
 

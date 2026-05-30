@@ -243,6 +243,83 @@ def delete_task(task_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"status": "ok"}
 
+# --- Снабжение и Материалы (Срез №5) ---
+
+@app.post("/api/suppliers", response_model=schemas.SupplierResponse, status_code=201)
+def create_supplier(supplier_data: schemas.SupplierCreate, db: Session = Depends(get_db)):
+    db_supplier = models.Supplier(**supplier_data.model_dump())
+    db.add(db_supplier)
+    db.commit()
+    db.refresh(db_supplier)
+    return db_supplier
+
+@app.get("/api/suppliers", response_model=List[schemas.SupplierResponse])
+def get_suppliers(db: Session = Depends(get_db)):
+    return db.query(models.Supplier).order_by(models.Supplier.id.desc()).all()
+
+@app.post("/api/materials", response_model=schemas.MaterialResponse, status_code=201)
+def create_material(material_data: schemas.MaterialCreate, db: Session = Depends(get_db)):
+    db_material = models.Material(**material_data.model_dump())
+    db.add(db_material)
+    db.commit()
+    db.refresh(db_material)
+    return db_material
+
+@app.get("/api/materials", response_model=List[schemas.MaterialResponse])
+def get_materials(db: Session = Depends(get_db)):
+    return db.query(models.Material).order_by(models.Material.id.desc()).all()
+
+@app.post("/api/supply-requests", response_model=schemas.SupplyRequestResponse, status_code=201)
+def create_supply_request(req_data: schemas.SupplyRequestCreate, db: Session = Depends(get_db)):
+    db_order = db.query(models.Order).filter(models.Order.id == req_data.order_id).first()
+    if not db_order:
+        raise HTTPException(status_code=404, detail="Заказ не найден")
+    
+    db_material = db.query(models.Material).filter(models.Material.id == req_data.material_id).first()
+    if not db_material:
+        raise HTTPException(status_code=404, detail="Материал не найден")
+    
+    db_req = models.SupplyRequest(**req_data.model_dump())
+    db.add(db_req)
+    db.commit()
+    db.refresh(db_req)
+    return db_req
+
+@app.get("/api/supply-requests", response_model=List[schemas.SupplyRequestResponse])
+def get_supply_requests(db: Session = Depends(get_db)):
+    current_role = os.getenv("CURRENT_ROLE", "UNKNOWN")
+    if current_role != "DIRECTOR":
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return db.query(models.SupplyRequest).order_by(models.SupplyRequest.id.desc()).all()
+
+@app.patch("/api/supply-requests/{req_id}/status", response_model=schemas.SupplyRequestResponse)
+def update_supply_request_status(req_id: int, status_data: schemas.SupplyRequestStatusUpdate, db: Session = Depends(get_db)):
+    db_req = db.query(models.SupplyRequest).filter(models.SupplyRequest.id == req_id).first()
+    if not db_req:
+        raise HTTPException(status_code=404, detail="Заявка не найдена")
+    
+    db_req.status = status_data.status
+    if status_data.delivery_date is not None:
+        db_req.delivery_date = status_data.delivery_date
+    
+    db.commit()
+    db.refresh(db_req)
+    return db_req
+
+@app.delete("/api/supply-requests/{req_id}")
+def delete_supply_request(req_id: int, db: Session = Depends(get_db)):
+    current_role = os.getenv("CURRENT_ROLE", "UNKNOWN")
+    if current_role != "DIRECTOR":
+        raise HTTPException(status_code=403, detail="Forbidden")
+    
+    db_req = db.query(models.SupplyRequest).filter(models.SupplyRequest.id == req_id).first()
+    if not db_req:
+        raise HTTPException(status_code=404, detail="Заявка не найдена")
+    
+    db.delete(db_req)
+    db.commit()
+    return {"status": "ok"}
+
 # Отдаем UI по корневому URL (без Next.js, просто статика)
 @app.get("/")
 def serve_frontend():

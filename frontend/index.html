@@ -207,6 +207,34 @@
             border-left: 5px solid #e53e3e;
             background-color: #fff5f5;
         }
+
+        /* Supply Module Tab and Badge Styles (Срез №5) */
+        .tab-btn {
+            background: transparent;
+            border: none;
+            font-size: 15px;
+            font-weight: 600;
+            color: #7f8c8d;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+        .tab-btn:hover {
+            color: #3498db;
+            background: #f0f8ff;
+        }
+        .active-tab {
+            color: #2980b9;
+            background: #ebf8ff;
+            border-bottom: 2px solid #3498db;
+        }
+        .badge-supply-draft { background-color: #f7fafc; color: #4a5568; border: 1px solid #e2e8f0; }
+        .badge-supply-approved { background-color: #ebf8ff; color: #2b6cb0; border: 1px solid #bee3f8; }
+        .badge-supply-ordered { background-color: #fffaf0; color: #dd6b20; border: 1px solid #feebc8; }
+        .badge-supply-delivered { background-color: #f0fff4; color: #2f855a; border: 1px solid #c6f6d5; }
+        .badge-supply-cancelled { background-color: #fff5f5; color: #c53030; border: 1px solid #fed7d7; }
         
         /* Buttons and Inputs */
         .header-actions {
@@ -432,6 +460,138 @@
             <p>Единая лента событий (дедлайны задач, даты доставок и монтажей заказов), сгруппированная по дням.</p>
             <div class="detail-card" id="calendarTimeline" style="padding: 20px;">
                 <div style="text-align: center; padding: 20px; color: #7f8c8d;">Загрузка календаря...</div>
+            </div>
+        </div>
+
+        <!-- Модуль Снабжения (Срез №5) -->
+        <div class="leads-table-container" style="margin-top: 40px; margin-bottom: 40px;">
+            <h1>Carpenter CRM - Срез №5 (Снабжение и Закупки)</h1>
+            <p>Управление закупками материалов под заказы клиентов, каталогом материалов и контактами поставщиков.</p>
+            
+            <!-- Переключатель вкладок -->
+            <div class="tabs-header" style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px;">
+                <button class="tab-btn active-tab" onclick="switchSupplyTab('requests', this)" id="tab-btn-requests">Заявки на закупку</button>
+                <button class="tab-btn" onclick="switchSupplyTab('materials', this)" id="tab-btn-materials">Каталог материалов</button>
+                <button class="tab-btn" onclick="switchSupplyTab('suppliers', this)" id="tab-btn-suppliers">Поставщики</button>
+                <span id="supplyActionStatus" class="action-status" style="margin-left: auto; align-self: center;"></span>
+            </div>
+
+            <!-- Вкладка: Заявки на закупку -->
+            <div class="tab-content" id="tab-content-requests">
+                <div class="header-actions">
+                    <p style="margin: 0; font-size: 14px; color:#555;">Потребности в закупках под активные заказы производства.</p>
+                    <button class="btn btn-primary" onclick="addNewSupplyRequestRow()">+ Создать заявку</button>
+                </div>
+                <div class="detail-card" style="padding: 0; overflow-x: auto; margin-top: 10px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">ID</th>
+                                <th>Заказ / Изделие</th>
+                                <th>Клиент</th>
+                                <th>Материал</th>
+                                <th>Количество</th>
+                                <th>Цена за единицу</th>
+                                <th>Сумма закупки</th>
+                                <th style="width: 160px;">Статус</th>
+                                <th>Срок доставки</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="supplyRequestsTableBody">
+                            <tr>
+                                <td colspan="10" style="text-align: center; padding: 30px; color: #7f8c8d;">Загрузка заявок...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Вкладка: Каталог материалов -->
+            <div class="tab-content" id="tab-content-materials" style="display: none;">
+                <div class="header-actions" style="margin-bottom: 15px;">
+                    <p style="margin: 0; font-size: 14px; color:#555;">Каталог используемых сырьевых материалов, фурнитуры и химии.</p>
+                    <button class="btn btn-primary" onclick="showAddMaterialForm()">+ Новый материал</button>
+                </div>
+                <div class="detail-card" id="addMaterialFormContainer" style="display: none; padding: 15px; margin-bottom: 15px; background: #fafafa;">
+                    <h3 style="margin-top: 0; font-size: 15px; color: #2c3e50;">Добавление материала в каталог</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px;">
+                        <input type="text" class="table-input" id="new_mat_name" placeholder="Название (например: Дуб сухой 50мм)">
+                        <input type="text" class="table-input" id="new_mat_sku" placeholder="Артикул / SKU (опц.)">
+                        <select class="table-select" id="new_mat_unit">
+                            <option value="шт">шт (штука)</option>
+                            <option value="м²">м² (кв. метр)</option>
+                            <option value="м.п.">м.п. (пог. метр)</option>
+                            <option value="литр">литр</option>
+                            <option value="кг">кг (килограмм)</option>
+                            <option value="куб.м">куб.м (кубометр)</option>
+                        </select>
+                        <input type="number" class="table-input" id="new_mat_price" placeholder="Базовая цена (руб.)" min="0">
+                    </div>
+                    <div style="margin-top: 12px; display: flex; justify-content: flex-end; gap: 10px;">
+                        <button class="btn" onclick="hideAddMaterialForm()">Отмена</button>
+                        <button class="btn btn-success" onclick="saveNewMaterial()">Сохранить в каталог</button>
+                    </div>
+                </div>
+                <div class="detail-card" style="padding: 0; overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">ID</th>
+                                <th>Наименование материала</th>
+                                <th>Артикул (SKU)</th>
+                                <th>Единица измерения</th>
+                                <th>Ориентировочная базовая цена</th>
+                                <th>Дата создания</th>
+                            </tr>
+                        </thead>
+                        <tbody id="materialsTableBody">
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 30px; color: #7f8c8d;">Загрузка материалов...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Вкладка: Поставщики -->
+            <div class="tab-content" id="tab-content-suppliers" style="display: none;">
+                <div class="header-actions" style="margin-bottom: 15px;">
+                    <p style="margin: 0; font-size: 14px; color:#555;">Справочник контактов проверенных поставщиков сырья и фурнитуры.</p>
+                    <button class="btn btn-primary" onclick="showAddSupplierForm()">+ Новый поставщик</button>
+                </div>
+                <div class="detail-card" id="addSupplierFormContainer" style="display: none; padding: 15px; margin-bottom: 15px; background: #fafafa;">
+                    <h3 style="margin-top: 0; font-size: 15px; color: #2c3e50;">Добавление поставщика</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px;">
+                        <input type="text" class="table-input" id="new_sup_name" placeholder="Название компании">
+                        <input type="text" class="table-input" id="new_sup_contact" placeholder="Контактное лицо">
+                        <input type="text" class="table-input" id="new_sup_phone" placeholder="Телефон">
+                        <input type="email" class="table-input" id="new_sup_email" placeholder="Email">
+                    </div>
+                    <div style="margin-top: 12px; display: flex; justify-content: flex-end; gap: 10px;">
+                        <button class="btn" onclick="hideAddSupplierForm()">Отмена</button>
+                        <button class="btn btn-success" onclick="saveNewSupplier()">Сохранить поставщика</button>
+                    </div>
+                </div>
+                <div class="detail-card" style="padding: 0; overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">ID</th>
+                                <th>Название компании</th>
+                                <th>Контактное лицо</th>
+                                <th>Телефон</th>
+                                <th>Email</th>
+                                <th>Создан</th>
+                            </tr>
+                        </thead>
+                        <tbody id="suppliersTableBody">
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 30px; color: #7f8c8d;">Загрузка поставщиков...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -1578,11 +1738,468 @@
             container.innerHTML = html;
         }
 
-        // Запускаем загрузку лидов, клиентов, заказов и задач
+        // === Модуль Снабжения и Материалов (Срез №5) ===
+
+        function getSupplyStatusClass(status) {
+            switch (status) {
+                case 'черновик': return 'badge-supply-draft';
+                case 'согласовано': return 'badge-supply-approved';
+                case 'заказано': return 'badge-supply-ordered';
+                case 'получено': return 'badge-supply-delivered';
+                case 'отменено': return 'badge-supply-cancelled';
+                default: return 'badge-source';
+            }
+        }
+
+        const SUPPLY_STATUSES = ['черновик', 'согласовано', 'заказано', 'получено', 'отменено'];
+
+        function setSupplyActionStatus(message, type) {
+            const statusEl = document.getElementById('supplyActionStatus');
+            if (statusEl) {
+                statusEl.textContent = message;
+                statusEl.className = 'action-status ' + type;
+                if (type === 'success' || type === 'error') {
+                    setTimeout(() => { statusEl.textContent = ''; }, 4000);
+                }
+            }
+        }
+
+        // Переключение вкладок
+        function switchSupplyTab(tabId, btn) {
+            // Скрыть весь контент вкладок
+            document.querySelectorAll('.tab-content').forEach(el => {
+                el.style.display = 'none';
+            });
+            // Показать выбранную вкладку
+            document.getElementById(`tab-content-${tabId}`).style.display = 'block';
+            
+            // Сбросить активный класс у всех кнопок
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('active-tab');
+            });
+            // Добавить активный класс выбранной кнопке
+            btn.classList.add('active-tab');
+
+            // Подгрузить данные в зависимости от открытой вкладки
+            if (tabId === 'requests') {
+                fetchSupplyRequests();
+            } else if (tabId === 'materials') {
+                fetchMaterials();
+            } else if (tabId === 'suppliers') {
+                fetchSuppliers();
+            }
+        }
+
+        // Поставщики
+        function fetchSuppliers() {
+            fetch('/api/suppliers')
+                .then(response => {
+                    if (!response.ok) throw new Error('Ошибка загрузки поставщиков');
+                    return response.json();
+                })
+                .then(data => {
+                    window.allSuppliers = data;
+                    const tbody = document.getElementById('suppliersTableBody');
+                    tbody.innerHTML = '';
+                    if (data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">Список поставщиков пуст</td></tr>';
+                        return;
+                    }
+                    data.forEach(supplier => {
+                        const dateStr = new Date(supplier.created_at).toLocaleDateString('ru-RU');
+                        tbody.innerHTML += `
+                            <tr>
+                                <td style="font-weight: 500; color: #7f8c8d;">#${supplier.id}</td>
+                                <td><strong>${supplier.name}</strong></td>
+                                <td>${supplier.contact_person || '—'}</td>
+                                <td>${supplier.phone || '—'}</td>
+                                <td>${supplier.email || '—'}</td>
+                                <td style="color: #7f8c8d; font-size: 13px;">${dateStr}</td>
+                            </tr>
+                        `;
+                    });
+                })
+                .catch(error => {
+                    setSupplyActionStatus(error.message, 'error');
+                });
+        }
+
+        function showAddSupplierForm() {
+            document.getElementById('addSupplierFormContainer').style.display = 'block';
+        }
+
+        function hideAddSupplierForm() {
+            document.getElementById('addSupplierFormContainer').style.display = 'none';
+        }
+
+        function saveNewSupplier() {
+            const name = document.getElementById('new_sup_name').value.trim();
+            const contact = document.getElementById('new_sup_contact').value.trim() || null;
+            const phone = document.getElementById('new_sup_phone').value.trim() || null;
+            const email = document.getElementById('new_sup_email').value.trim() || null;
+
+            if (!name) {
+                setSupplyActionStatus('Ошибка: Укажите название компании', 'error');
+                return;
+            }
+
+            setSupplyActionStatus('Сохранение поставщика...', 'loading');
+
+            fetch('/api/suppliers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, contact_person: contact, phone, email })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка создания поставщика');
+                return response.json();
+            })
+            .then(data => {
+                setSupplyActionStatus('Поставщик добавлен!', 'success');
+                hideAddSupplierForm();
+                fetchSuppliers();
+                // Очистить поля
+                document.getElementById('new_sup_name').value = '';
+                document.getElementById('new_sup_contact').value = '';
+                document.getElementById('new_sup_phone').value = '';
+                document.getElementById('new_sup_email').value = '';
+            })
+            .catch(error => {
+                setSupplyActionStatus(error.message, 'error');
+            });
+        }
+
+        // Материалы
+        function fetchMaterials() {
+            fetch('/api/materials')
+                .then(response => {
+                    if (!response.ok) throw new Error('Ошибка загрузки материалов');
+                    return response.json();
+                })
+                .then(data => {
+                    window.allMaterials = data;
+                    const tbody = document.getElementById('materialsTableBody');
+                    tbody.innerHTML = '';
+                    if (data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">Каталог материалов пуст</td></tr>';
+                        return;
+                    }
+                    data.forEach(material => {
+                        const dateStr = new Date(material.created_at).toLocaleDateString('ru-RU');
+                        tbody.innerHTML += `
+                            <tr>
+                                <td style="font-weight: 500; color: #7f8c8d;">#${material.id}</td>
+                                <td><strong>${material.name}</strong></td>
+                                <td><span class="badge badge-source">${material.sku || '—'}</span></td>
+                                <td>${material.unit}</td>
+                                <td style="font-weight: 600;">${material.price.toLocaleString('ru-RU')} ₽</td>
+                                <td style="color: #7f8c8d; font-size: 13px;">${dateStr}</td>
+                            </tr>
+                        `;
+                    });
+                })
+                .catch(error => {
+                    setSupplyActionStatus(error.message, 'error');
+                });
+        }
+
+        // Показать форму добавления материала
+        function showAddMaterialForm() {
+            document.getElementById('addMaterialFormContainer').style.display = 'block';
+        }
+
+        // Скрыть форму добавления материала
+        function hideAddMaterialForm() {
+            document.getElementById('addMaterialFormContainer').style.display = 'none';
+        }
+
+        // Сохранить новый материал
+        function saveNewMaterial() {
+            const name = document.getElementById('new_mat_name').value.trim();
+            const sku = document.getElementById('new_mat_sku').value.trim() || null;
+            const unit = document.getElementById('new_mat_unit').value;
+            const price = parseFloat(document.getElementById('new_mat_price').value) || 0.0;
+
+            if (!name) {
+                setSupplyActionStatus('Ошибка: Укажите название материала', 'error');
+                return;
+            }
+
+            setSupplyActionStatus('Сохранение материала...', 'loading');
+
+            fetch('/api/materials', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, sku, unit, price })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка создания материала');
+                return response.json();
+            })
+            .then(data => {
+                setSupplyActionStatus('Материал добавлен в каталог!', 'success');
+                hideAddMaterialForm();
+                fetchMaterials();
+                // Очистить поля
+                document.getElementById('new_mat_name').value = '';
+                document.getElementById('new_mat_sku').value = '';
+                document.getElementById('new_mat_price').value = '';
+            })
+            .catch(error => {
+                setSupplyActionStatus(error.message, 'error');
+            });
+        }
+
+        // Заявки на закупку (Supply Requests)
+        function fetchSupplyRequests() {
+            fetch('/api/supply-requests')
+                .then(response => {
+                    if (!response.ok) throw new Error('Ошибка загрузки заявок на закупку');
+                    return response.json();
+                })
+                .then(data => {
+                    window.allSupplyRequests = data;
+                    const tbody = document.getElementById('supplyRequestsTableBody');
+                    tbody.innerHTML = '';
+
+                    if (data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 30px;">Нет активных заявок на закупку материалов</td></tr>';
+                        return;
+                    }
+
+                    data.forEach(req => {
+                        const deliveryStr = req.delivery_date ? new Date(req.delivery_date).toLocaleDateString('ru-RU') : '—';
+                        const statusClass = getSupplyStatusClass(req.status);
+                        const orderText = req.order_product_type ? `${req.order_product_type} (Заказ #${req.order_id})` : `Заказ #${req.order_id}`;
+                        const clientName = req.client_name || '—';
+                        const materialName = req.material_name || `Материал #${req.material_id}`;
+                        const totalSum = req.quantity * req.actual_price;
+
+                        // Статус Dropdown
+                        let statusSelectHtml = `<select class="table-select ${statusClass}" onchange="updateSupplyStatus(${req.id}, this.value, this)" style="font-weight: 500; border-radius: 4px; padding: 4px 8px; border: 1px solid #ccc; cursor: pointer; width: 100%;">`;
+                        SUPPLY_STATUSES.forEach(st => {
+                            const selected = req.status === st ? 'selected' : '';
+                            statusSelectHtml += `<option value="${st}" ${selected}>${st}</option>`;
+                        });
+                        statusSelectHtml += `</select>`;
+
+                        tbody.innerHTML += `
+                            <tr>
+                                <td style="font-weight: 500; color: #7f8c8d;">#${req.id}</td>
+                                <td><strong>${orderText}</strong></td>
+                                <td>${clientName}</td>
+                                <td><strong>${materialName}</strong></td>
+                                <td>${req.quantity}</td>
+                                <td>${req.actual_price.toLocaleString('ru-RU')} ₽</td>
+                                <td style="font-weight: 600; color: #2c3e50;">${totalSum.toLocaleString('ru-RU')} ₽</td>
+                                <td>${statusSelectHtml}</td>
+                                <td style="font-size: 13px; color: #555;">${deliveryStr}</td>
+                                <td>
+                                    <button class="btn-icon" onclick="deleteSupplyRequest(${req.id}, this)" title="Удалить">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="3 6 5 6 21 6"></polyline>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                            <line x1="10" y1="11" x2="10" y2="17"></line>
+                                            <line x1="14" y1="11" x2="14" y2="17"></line>
+                                        </svg>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                })
+                .catch(error => {
+                    setSupplyActionStatus(error.message, 'error');
+                });
+        }
+
+        function updateSupplyStatus(reqId, newStatus, selectEl) {
+            setSupplyActionStatus('Обновление статуса закупки...', 'loading');
+            fetch(`/api/supply-requests/${reqId}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка обновления статуса');
+                return response.json();
+            })
+            .then(data => {
+                setSupplyActionStatus('Статус закупки обновлен!', 'success');
+                selectEl.className = `table-select ${getSupplyStatusClass(newStatus)}`;
+                fetchSupplyRequests();
+            })
+            .catch(error => {
+                setSupplyActionStatus(error.message, 'error');
+                fetchSupplyRequests();
+            });
+        }
+
+        function addNewSupplyRequestRow() {
+            const tbody = document.getElementById('supplyRequestsTableBody');
+            if (tbody.querySelector('td[colspan="10"]')) {
+                tbody.innerHTML = '';
+            }
+
+            // Формируем список заказов
+            let orderOptions = '';
+            if (window.allOrders && window.allOrders.length > 0) {
+                window.allOrders.forEach(o => {
+                    orderOptions += `<option value="${o.id}">${o.product_type} (Заказ #${o.id})</option>`;
+                });
+            } else {
+                setSupplyActionStatus('Ошибка: Нет активных заказов для привязки закупки', 'error');
+                return;
+            }
+
+            // Формируем список материалов (если каталог не загружен, загрузим)
+            let materialOptions = '';
+            const fillRow = () => {
+                window.allMaterials.forEach(m => {
+                    materialOptions += `<option value="${m.id}" data-price="${m.price}">${m.name} (${m.unit})</option>`;
+                });
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-weight: 500; color: #7f8c8d;">Авто</td>
+                    <td colspan="2">
+                        <select class="table-select" id="new_req_order_id" style="width: 100%;">
+                            ${orderOptions}
+                        </select>
+                    </td>
+                    <td>
+                        <select class="table-select" id="new_req_material_id" style="width: 100%;" onchange="autoFillMaterialPrice(this)">
+                            ${materialOptions}
+                        </select>
+                    </td>
+                    <td><input type="number" class="table-input" id="new_req_qty" placeholder="Кол-во" value="1" min="0.1" step="any" style="width: 80px;" oninput="recalcSupplySum(this)"></td>
+                    <td><input type="number" class="table-input" id="new_req_price" placeholder="Цена (руб.)" min="0" style="width: 100px;" oninput="recalcSupplySum(this)"></td>
+                    <td id="new_req_total_display" style="font-weight: 600; color:#2c3e50;">0 ₽</td>
+                    <td>
+                        <select class="table-select badge-supply-draft" id="new_req_status" style="width: 100%;">
+                            <option value="черновик" selected>черновик</option>
+                            <option value="согласовано">согласовано</option>
+                            <option value="заказано">заказано</option>
+                            <option value="получено">получено</option>
+                            <option value="отменено">отменено</option>
+                        </select>
+                    </td>
+                    <td><input type="date" class="table-input" id="new_req_delivery_date" style="font-size: 11px; padding: 2px;"></td>
+                    <td><button class="btn btn-success" onclick="saveSupplyRequest(this)">Сохранить</button></td>
+                `;
+                tbody.insertBefore(tr, tbody.firstChild);
+
+                // Инициализируем базовую цену при вставке
+                const matSelect = tr.querySelector('#new_req_material_id');
+                autoFillMaterialPrice(matSelect);
+
+                // Обработчик изменения цвета статуса в форме
+                const statusSelect = tr.querySelector('#new_req_status');
+                statusSelect.addEventListener('change', function() {
+                    statusSelect.className = `table-select ${getSupplyStatusClass(this.value)}`;
+                });
+            };
+
+            if (!window.allMaterials) {
+                fetch('/api/materials')
+                    .then(r => r.json())
+                    .then(data => {
+                        window.allMaterials = data;
+                        fillRow();
+                    });
+            } else {
+                fillRow();
+            }
+        }
+
+        function autoFillMaterialPrice(selectEl) {
+            const tr = selectEl.closest('tr');
+            const selectedOpt = selectEl.options[selectEl.selectedIndex];
+            const basePrice = parseFloat(selectedOpt.getAttribute('data-price')) || 0.0;
+            const priceInput = tr.querySelector('#new_req_price');
+            priceInput.value = basePrice;
+            recalcSupplySum(selectEl);
+        }
+
+        function recalcSupplySum(el) {
+            const tr = el.closest('tr');
+            const qty = parseFloat(tr.querySelector('#new_req_qty').value) || 0.0;
+            const price = parseFloat(tr.querySelector('#new_req_price').value) || 0.0;
+            const sumDisplay = tr.querySelector('#new_req_total_display');
+            sumDisplay.textContent = `${(qty * price).toLocaleString('ru-RU')} ₽`;
+        }
+
+        function saveSupplyRequest(btn) {
+            const tr = btn.closest('tr');
+            const orderId = parseInt(tr.querySelector('#new_req_order_id').value);
+            const materialId = parseInt(tr.querySelector('#new_req_material_id').value);
+            const quantity = parseFloat(tr.querySelector('#new_req_qty').value);
+            const actualPrice = parseFloat(tr.querySelector('#new_req_price').value);
+            const status = tr.querySelector('#new_req_status').value;
+            const deliveryDate = tr.querySelector('#new_req_delivery_date').value || null;
+
+            if (isNaN(quantity) || quantity <= 0 || isNaN(actualPrice) || actualPrice < 0) {
+                setSupplyActionStatus('Ошибка: Введите корректные количество и цену', 'error');
+                return;
+            }
+
+            setSupplyActionStatus('Сохранение заявки на закупку...', 'loading');
+
+            const payload = {
+                order_id: orderId,
+                material_id: materialId,
+                quantity: quantity,
+                actual_price: actualPrice,
+                status: status,
+                delivery_date: deliveryDate
+            };
+
+            fetch('/api/supply-requests', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка при сохранении заявки');
+                return response.json();
+            })
+            .then(data => {
+                setSupplyActionStatus('Заявка на закупку успешно добавлена!', 'success');
+                fetchSupplyRequests();
+            })
+            .catch(error => {
+                setSupplyActionStatus(error.message, 'error');
+            });
+        }
+
+        function deleteSupplyRequest(reqId, btn) {
+            if (!confirm('Вы уверены, что хотите удалить эту заявку на закупку?')) {
+                return;
+            }
+
+            setSupplyActionStatus('Удаление заявки...', 'loading');
+
+            fetch(`/api/supply-requests/${reqId}`, { method: 'DELETE' })
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка при удалении');
+                return response.json();
+            })
+            .then(data => {
+                setSupplyActionStatus('Заявка удалена!', 'success');
+                btn.closest('tr').remove();
+                fetchSupplyRequests();
+            })
+            .catch(error => {
+                setSupplyActionStatus(error.message, 'error');
+            });
+        }
+
+        // Запускаем загрузку лидов, клиентов, заказов, задач и снабжения
         fetchLeads();
         fetchClients();
         fetchOrders();
         fetchTasks();
+        fetchSupplyRequests();
     </script>
 </body>
 </html>

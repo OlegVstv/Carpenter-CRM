@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime, date
-from models import LeadSource, LeadStatus, ClientStatus, OrderStatus, TaskPriority, TaskStatus
+from models import LeadSource, LeadStatus, ClientStatus, OrderStatus, TaskPriority, TaskStatus, SupplyRequestStatus
 
 class LeadBase(BaseModel):
     client_name: str
@@ -94,4 +94,62 @@ class TaskResponse(TaskBase):
     order_product_type: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+# --- Снабжение и Материалы (Срез №5) ---
+
+class SupplierBase(BaseModel):
+    name: str
+    contact_person: str | None = None
+    phone: str | None = None
+    email: str | None = None
+
+class SupplierCreate(SupplierBase):
+    pass
+
+class SupplierResponse(SupplierBase):
+    id: int
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+class MaterialBase(BaseModel):
+    name: str
+    sku: str | None = None
+    unit: str
+    price: float = 0.0
+
+class MaterialCreate(MaterialBase):
+    pass
+
+class MaterialResponse(MaterialBase):
+    id: int
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+class SupplyRequestBase(BaseModel):
+    quantity: float
+    actual_price: float
+    status: SupplyRequestStatus = SupplyRequestStatus.DRAFT
+    delivery_date: date | None = None
+
+class SupplyRequestCreate(SupplyRequestBase):
+    order_id: int
+    material_id: int
+
+class SupplyRequestStatusUpdate(BaseModel):
+    status: SupplyRequestStatus
+    delivery_date: date | None = None
+
+class SupplyRequestResponse(SupplyRequestBase):
+    id: int
+    order_id: int
+    material_id: int
+    created_at: datetime
+    material_name: str | None = None
+    order_product_type: str | None = None
+    client_name: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
 

@@ -11,6 +11,7 @@ from seed_clients import seed_clients
 from seed_orders import seed_orders
 from seed_tasks import seed_tasks
 from seed_supply import seed_supply
+from seed_financial import seed_financial
 
 def seed_all():
     print("=== Сброс и инициализация базы данных ===")
@@ -32,6 +33,9 @@ def seed_all():
 
     print("\n=== [5] Сидирование Снабжения ===")
     seed_supply()
+
+    print("\n=== [6] Сидирование Финансов ===")
+    seed_financial()
 
     print("\n=== ВСЕ СИДЫ УСПЕШНО ВЫПОЛНЕНЫ! ===")
 

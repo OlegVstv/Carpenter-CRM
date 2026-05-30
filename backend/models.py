@@ -91,11 +91,25 @@ class Order(Base):
     client = relationship("Client", back_populates="orders")
     tasks = relationship("Task", back_populates="order", cascade="all, delete-orphan")
     supply_requests = relationship("SupplyRequest", back_populates="order", cascade="all, delete-orphan")
+    payments = relationship("Payment", back_populates="order", cascade="all, delete-orphan")
 
 
     @property
     def client_name(self):
         return self.client.name if self.client else None
+
+    @property
+    def remaining_balance(self):
+        return max(0.0, self.price - self.paid_amount)
+
+    @property
+    def payment_status(self):
+        if self.paid_amount == 0:
+            return "ожидает оплаты"
+        elif self.paid_amount < self.price:
+            return "предоплата"
+        else:
+            return "оплачен полностью"
 
 class TaskPriority(str, enum.Enum):
     LOW = "низкий"
@@ -183,5 +197,18 @@ class SupplyRequest(Base):
     @property
     def client_name(self):
         return self.order.client.name if self.order and self.order.client else None
+
+
+class Payment(Base):
+    __tablename__ = "payments"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=False)
+    amount = Column(Float, nullable=False)
+    payment_date = Column(Date, nullable=False, default=lambda: datetime.now(timezone.utc).date())
+    comment = Column(String, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    order = relationship("Order", back_populates="payments")
 
 

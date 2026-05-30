@@ -320,6 +320,81 @@ def delete_supply_request(req_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"status": "ok"}
 
+
+# --- Финансы и Платежи (Срез №6) ---
+
+@app.post("/api/payments", response_model=schemas.PaymentResponse, status_code=201)
+def create_payment(payment_data: schemas.PaymentCreate, db: Session = Depends(get_db)):
+    db_order = db.query(models.Order).filter(models.Order.id == payment_data.order_id).first()
+    if not db_order:
+        raise HTTPException(status_code=404, detail="Заказ не найден")
+    
+    # Determine the payment date
+    pay_date = payment_data.payment_date
+    if pay_date is None:
+        from datetime import datetime, timezone
+        pay_date = datetime.now(timezone.utc).date()
+
+    db_payment = models.Payment(
+        order_id=payment_data.order_id,
+        amount=payment_data.amount,
+        payment_date=pay_date,
+        comment=payment_data.comment
+    )
+    db.add(db_payment)
+    
+    # Update order's paid_amount
+    db_order.paid_amount += payment_data.amount
+    
+    db.commit()
+    db.refresh(db_payment)
+    return db_payment
+
+@app.delete("/api/payments/{payment_id}")
+def delete_payment(payment_id: int, db: Session = Depends(get_db)):
+    current_role = os.getenv("CURRENT_ROLE", "UNKNOWN")
+    if current_role != "DIRECTOR":
+        raise HTTPException(status_code=403, detail="Forbidden")
+        
+    db_payment = db.query(models.Payment).filter(models.Payment.id == payment_id).first()
+    if not db_payment:
+        raise HTTPException(status_code=404, detail="Платеж не найден")
+        
+    db_order = db.query(models.Order).filter(models.Order.id == db_payment.order_id).first()
+    if db_order:
+        # Subtract the payment amount
+        db_order.paid_amount = max(0.0, db_order.paid_amount - db_payment.amount)
+        
+    db.delete(db_payment)
+    db.commit()
+    return {"status": "ok"}
+
+@app.get("/api/financials/summary", response_model=schemas.FinancialSummaryResponse)
+def get_financials_summary(db: Session = Depends(get_db)):
+    current_role = os.getenv("CURRENT_ROLE", "UNKNOWN")
+    if current_role != "DIRECTOR":
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    orders = db.query(models.Order).all()
+    total_revenue = sum(order.price for order in orders)
+    total_paid = sum(order.paid_amount for order in orders)
+    total_debt = max(0.0, total_revenue - total_paid)
+    
+    # Fetch all supply requests that are NOT cancelled
+    supplies = db.query(models.SupplyRequest).filter(models.SupplyRequest.status != models.SupplyRequestStatus.CANCELLED).all()
+    total_expenses = sum(s.quantity * s.actual_price for s in supplies)
+    
+    net_profit = total_revenue - total_expenses
+    
+    return {
+        "total_revenue": total_revenue,
+        "total_paid": total_paid,
+        "total_debt": total_debt,
+        "total_expenses": total_expenses,
+        "net_profit": net_profit
+    }
+
+
 # Отдаем UI по корневому URL (без Next.js, просто статика)
 @app.get("/")
 def serve_frontend():

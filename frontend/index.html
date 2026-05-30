@@ -236,6 +236,62 @@
         .badge-supply-delivered { background-color: #f0fff4; color: #2f855a; border: 1px solid #c6f6d5; }
         .badge-supply-cancelled { background-color: #fff5f5; color: #c53030; border: 1px solid #fed7d7; }
         
+        /* Financial Module Styles (Срез №6) */
+        .financial-dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+            margin-top: 15px;
+        }
+        .fin-card {
+            padding: 16px;
+            border-radius: 10px;
+            color: #ffffff;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 85px;
+        }
+        .fin-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        .fin-card-title {
+            font-size: 11px;
+            font-weight: 600;
+            opacity: 0.85;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+        .fin-card-value {
+            font-size: 20px;
+            font-weight: 700;
+            margin-top: 10px;
+            white-space: nowrap;
+        }
+        .fin-card-revenue { background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); }
+        .fin-card-paid { background: linear-gradient(135deg, #11998e 0%, #2ecc71 100%); }
+        .fin-card-debt { background: linear-gradient(135deg, #ff9966 0%, #ff5e62 100%); }
+        .fin-card-expenses { background: linear-gradient(135deg, #654ea3 0%, #9b59b6 100%); }
+        .fin-card-profit { background: linear-gradient(135deg, #1f4037 0%, #16a085 100%); }
+
+        .badge-pay-unpaid { background-color: #fff5f5; color: #c53030; border: 1px solid #fed7d7; }
+        .badge-pay-partial { background-color: #ebf8ff; color: #2b6cb0; border: 1px solid #bee3f8; }
+        .badge-pay-full { background-color: #f0fff4; color: #2f855a; border: 1px solid #c6f6d5; }
+
+        .payment-history-row { background-color: #f9fbfd; border-left: 4px solid #3498db; }
+        .payment-history-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13px; }
+        .payment-history-table th { background-color: #eef2f7; color: #475569; font-weight: 600; padding: 6px 10px; }
+        .payment-history-table td { padding: 6px 10px; border-bottom: 1px solid #e2e8f0; }
+        
+        @media (max-width: 900px) {
+            .financial-dashboard-grid { grid-template-columns: repeat(2, 1fr); }
+            .financial-dashboard-grid div:last-child { grid-column: span 2; }
+        }
+        
         /* Buttons and Inputs */
         .header-actions {
             display: flex;
@@ -588,6 +644,99 @@
                         <tbody id="suppliersTableBody">
                             <tr>
                                 <td colspan="6" style="text-align: center; padding: 30px; color: #7f8c8d;">Загрузка поставщиков...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модуль Финансов (Срез №6) -->
+        <div class="leads-table-container" style="margin-top: 40px; margin-bottom: 40px;">
+            <h1>Carpenter CRM - Срез №6 (Финансовый учет)</h1>
+            <p>Сводный баланс доходов и расходов столярного производства, учет платежей клиентов и расходов на материалы.</p>
+
+            <!-- Финансовый дашборд -->
+            <div class="financial-dashboard-grid">
+                <div class="fin-card fin-card-revenue">
+                    <span class="fin-card-title">Общая выручка</span>
+                    <span class="fin-card-value" id="fin-revenue">0 ₽</span>
+                </div>
+                <div class="fin-card fin-card-paid">
+                    <span class="fin-card-title">Всего оплачено</span>
+                    <span class="fin-card-value" id="fin-paid">0 ₽</span>
+                </div>
+                <div class="fin-card fin-card-debt">
+                    <span class="fin-card-title">Долг клиентов</span>
+                    <span class="fin-card-value" id="fin-debt">0 ₽</span>
+                </div>
+                <div class="fin-card fin-card-expenses">
+                    <span class="fin-card-title">Затраты на снабжение</span>
+                    <span class="fin-card-value" id="fin-expenses">0 ₽</span>
+                </div>
+                <div class="fin-card fin-card-profit">
+                    <span class="fin-card-title">Ожидаемая прибыль</span>
+                    <span class="fin-card-value" id="fin-profit">0 ₽</span>
+                </div>
+            </div>
+
+            <!-- Вкладки финансового блока -->
+            <div class="tabs-header" style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px;">
+                <button class="tab-btn active-tab" onclick="switchFinanceTab('sales', this)" id="tab-btn-fin-sales">Доходы и Платежи</button>
+                <button class="tab-btn" onclick="switchFinanceTab('expenses', this)" id="tab-btn-fin-expenses">Расходы по закупкам</button>
+                <span id="financeActionStatus" class="action-status" style="margin-left: auto; align-self: center;"></span>
+            </div>
+
+            <!-- Вкладка: Доходы и Платежи по заказам -->
+            <div class="tab-content" id="tab-content-fin-sales">
+                <div class="header-actions">
+                    <p style="margin: 0; font-size: 14px; color:#555;">Учет оплат по заказам клиентов. Внесение платежей и просмотр истории.</p>
+                </div>
+                <div class="detail-card" style="padding: 0; overflow-x: auto; margin-top: 10px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">ID</th>
+                                <th>Клиент</th>
+                                <th>Изделие</th>
+                                <th>Стоимость заказа</th>
+                                <th>Оплачено</th>
+                                <th>Остаток (Долг)</th>
+                                <th style="width: 160px;">Статус оплаты</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="financeOrdersTableBody">
+                            <tr>
+                                <td colspan="8" style="text-align: center; padding: 30px; color: #7f8c8d;">Загрузка финансовой информации по заказам...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Вкладка: Расходы по закупкам -->
+            <div class="tab-content" id="tab-content-fin-expenses" style="display: none;">
+                <div class="header-actions">
+                    <p style="margin: 0; font-size: 14px; color:#555;">Материальные затраты и статус одобрения заявок директором.</p>
+                </div>
+                <div class="detail-card" style="padding: 0; overflow-x: auto; margin-top: 10px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">ID закупки</th>
+                                <th>Заказ / Изделие</th>
+                                <th>Материал</th>
+                                <th>Клиент</th>
+                                <th>Количество</th>
+                                <th>Сумма закупки</th>
+                                <th style="width: 150px;">Статус закупки</th>
+                                <th>Согласование</th>
+                            </tr>
+                        </thead>
+                        <tbody id="financeSuppliesTableBody">
+                            <tr>
+                                <td colspan="8" style="text-align: center; padding: 30px; color: #7f8c8d;">Загрузка затрат по закупкам...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -2194,12 +2343,306 @@
             });
         }
 
-        // Запускаем загрузку лидов, клиентов, заказов, задач и снабжения
+        // --- Финансовый модуль (Срез №6) ---
+        function switchFinanceTab(tabName, btn) {
+            const parent = btn.parentNode;
+            parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
+            btn.classList.add('active-tab');
+
+            document.getElementById('tab-content-fin-sales').style.display = 'none';
+            document.getElementById('tab-content-fin-expenses').style.display = 'none';
+
+            if (tabName === 'sales') {
+                document.getElementById('tab-content-fin-sales').style.display = 'block';
+                loadFinancialOrders();
+            } else if (tabName === 'expenses') {
+                document.getElementById('tab-content-fin-expenses').style.display = 'block';
+                loadFinancialSupplies();
+            }
+        }
+
+        function fetchFinancials() {
+            fetch('/api/financials/summary')
+                .then(response => {
+                    if (response.status === 403) return null;
+                    if (!response.ok) throw new Error('Ошибка при загрузке финансовой сводки');
+                    return response.json();
+                })
+                .then(data => {
+                    if (!data) return;
+                    document.getElementById('fin-revenue').textContent = `${data.total_revenue.toLocaleString('ru-RU')} ₽`;
+                    document.getElementById('fin-paid').textContent = `${data.total_paid.toLocaleString('ru-RU')} ₽`;
+                    document.getElementById('fin-debt').textContent = `${data.total_debt.toLocaleString('ru-RU')} ₽`;
+                    document.getElementById('fin-expenses').textContent = `${data.total_expenses.toLocaleString('ru-RU')} ₽`;
+                    document.getElementById('fin-profit').textContent = `${data.net_profit.toLocaleString('ru-RU')} ₽`;
+                })
+                .catch(error => {
+                    console.error(error);
+                });
+        }
+
+        function loadFinancialOrders() {
+            fetch('/api/orders')
+                .then(r => r.json())
+                .then(orders => {
+                    const tbody = document.getElementById('financeOrdersTableBody');
+                    tbody.innerHTML = '';
+                    if (orders.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">Нет заказов для отображения</td></tr>';
+                        return;
+                    }
+                    orders.forEach(order => {
+                        let badgeClass = 'badge-pay-unpaid';
+                        if (order.payment_status === 'предоплата') badgeClass = 'badge-pay-partial';
+                        if (order.payment_status === 'оплачен полностью') badgeClass = 'badge-pay-full';
+
+                        tbody.innerHTML += `
+                            <tr id="fin-order-row-${order.id}">
+                                <td style="font-weight: 500; color:#7f8c8d;">#${order.id}</td>
+                                <td><strong>${order.client_name || 'Неизвестен'}</strong></td>
+                                <td>${order.product_type}</td>
+                                <td><strong>${order.price.toLocaleString('ru-RU')} ₽</strong></td>
+                                <td style="color:#27ae60; font-weight:600;">${order.paid_amount.toLocaleString('ru-RU')} ₽</td>
+                                <td style="color:${order.remaining_balance > 0 ? '#e74c3c' : '#7f8c8d'}; font-weight:600;">${order.remaining_balance.toLocaleString('ru-RU')} ₽</td>
+                                <td><span class="badge ${badgeClass}">${order.payment_status}</span></td>
+                                <td>
+                                    <button class="btn btn-success" onclick="togglePaymentForm(${order.id})" style="padding: 4px 8px; font-size: 12px; margin-right: 5px;">+ Платеж</button>
+                                    <button class="btn btn-primary" onclick="togglePaymentHistory(${order.id})" style="padding: 4px 8px; font-size: 12px; background-color:#34495e;">История (${order.payments.length})</button>
+                                </td>
+                            </tr>
+                            <tr id="payment-form-row-${order.id}" style="display: none; background-color: #fafafa;">
+                                <td colspan="8" style="padding: 15px; border-left: 4px solid #2ecc71;">
+                                    <h4 style="margin: 0 0 10px 0; font-size:14px;">Внести новый платеж</h4>
+                                    <div style="display: flex; gap: 10px; align-items: center;">
+                                        <input type="number" class="table-input" id="pay-amount-${order.id}" placeholder="Сумма (₽)" style="width: 150px;" min="1" max="${order.remaining_balance}">
+                                        <input type="text" class="table-input" id="pay-comment-${order.id}" placeholder="Комментарий (карта, р/с, и др.)" style="max-width: 300px;">
+                                        <input type="date" class="table-input" id="pay-date-${order.id}" style="width: 160px;" value="${new Date().toISOString().split('T')[0]}">
+                                        <button class="btn btn-success" onclick="submitNewPayment(${order.id})" style="padding: 6px 12px;">Сохранить</button>
+                                        <button class="btn" onclick="togglePaymentForm(${order.id})" style="padding: 6px 12px; background:#ddd; color:#333;">Отмена</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr id="payment-history-row-${order.id}" style="display: none;" class="payment-history-row">
+                                <td colspan="8" style="padding: 15px;">
+                                    <h4 style="margin: 0 0 10px 0; font-size:14px; color:#2c3e50;">История поступлений по заказу #${order.id}</h4>
+                                    ${order.payments.length === 0 ? '<div style="color:#7f8c8d; font-size:13px;">Платежей не найдено.</div>' : `
+                                    <table class="payment-history-table">
+                                        <thead>
+                                            <tr>
+                                                <th>ID платежа</th>
+                                                <th>Дата поступления</th>
+                                                <th>Сумма</th>
+                                                <th>Комментарий</th>
+                                                <th>Действия</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${order.payments.map(p => {
+                                                const d = new Date(p.payment_date).toLocaleDateString('ru-RU');
+                                                return `
+                                                <tr>
+                                                    <td>#${p.id}</td>
+                                                    <td>${d}</td>
+                                                    <td style="font-weight:600; color:#27ae60;">${p.amount.toLocaleString('ru-RU')} ₽</td>
+                                                    <td>${p.comment || ''}</td>
+                                                    <td>
+                                                        <button class="btn-icon" onclick="deleteOrderPayment(${p.id}, ${order.id})" title="Удалить платеж">
+                                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                                <polyline points="3 6 5 6 21 6"></polyline>
+                                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                                            </svg>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                                `;
+                                            }).join('')}
+                                        </tbody>
+                                    </table>
+                                    `}
+                                </td>
+                            </tr>
+                        `;
+                    });
+                });
+        }
+
+        function togglePaymentForm(orderId) {
+            const row = document.getElementById(`payment-form-row-${orderId}`);
+            row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+            if (row.style.display === 'table-row') {
+                document.getElementById(`payment-history-row-${orderId}`).style.display = 'none';
+            }
+        }
+
+        function togglePaymentHistory(orderId) {
+            const row = document.getElementById(`payment-history-row-${orderId}`);
+            row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+            if (row.style.display === 'table-row') {
+                document.getElementById(`payment-form-row-${orderId}`).style.display = 'none';
+            }
+        }
+
+        function submitNewPayment(orderId) {
+            const amountEl = document.getElementById(`pay-amount-${orderId}`);
+            const commentEl = document.getElementById(`pay-comment-${orderId}`);
+            const dateEl = document.getElementById(`pay-date-${orderId}`);
+
+            const amount = parseFloat(amountEl.value);
+            const comment = commentEl.value;
+            const date = dateEl.value || null;
+
+            if (isNaN(amount) || amount <= 0) {
+                setFinanceStatus('Ошибка: введите корректную сумму платежа', 'error');
+                return;
+            }
+
+            setFinanceStatus('Внесение платежа...', 'loading');
+
+            fetch('/api/payments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    order_id: orderId,
+                    amount: amount,
+                    comment: comment,
+                    payment_date: date
+                })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка при внесении платежа');
+                return response.json();
+            })
+            .then(data => {
+                setFinanceStatus('Платеж успешно внесен!', 'success');
+                fetchFinancials();
+                loadFinancialOrders();
+                fetchOrders(); // Синхронизируем основную таблицу заказов
+            })
+            .catch(error => {
+                setFinanceStatus(error.message, 'error');
+            });
+        }
+
+        function deleteOrderPayment(paymentId, orderId) {
+            if (!confirm('Вы уверены, что хотите удалить этот платеж?')) {
+                return;
+            }
+            setFinanceStatus('Удаление платежа...', 'loading');
+            fetch(`/api/payments/${paymentId}`, {
+                method: 'DELETE'
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка при удалении платежа');
+                return response.json();
+            })
+            .then(data => {
+                setFinanceStatus('Платеж успешно удален!', 'success');
+                fetchFinancials();
+                loadFinancialOrders();
+                fetchOrders(); // Синхронизируем основную таблицу заказов
+            })
+            .catch(error => {
+                setFinanceStatus(error.message, 'error');
+            });
+        }
+
+        function loadFinancialSupplies() {
+            fetch('/api/supply-requests')
+                .then(r => r.json())
+                .then(supplies => {
+                    const tbody = document.getElementById('financeSuppliesTableBody');
+                    tbody.innerHTML = '';
+                    if (supplies.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">Заявок на закупку не найдено</td></tr>';
+                        return;
+                    }
+                    supplies.forEach(s => {
+                        const totalSum = s.quantity * s.actual_price;
+                        let badgeClass = 'badge-supply-draft';
+                        switch (s.status) {
+                            case 'согласовано': badgeClass = 'badge-supply-approved'; break;
+                            case 'заказано': badgeClass = 'badge-supply-ordered'; break;
+                            case 'получено': badgeClass = 'badge-supply-delivered'; break;
+                            case 'отменено': badgeClass = 'badge-supply-cancelled'; break;
+                        }
+
+                        let approvalHtml = '';
+                        if (s.status === 'черновик') {
+                            approvalHtml = `<button class="btn btn-success" onclick="approvePurchaseFromFinance(${s.id})" style="padding: 4px 8px; font-size: 11px;">Согласовать</button>`;
+                        } else if (s.status === 'отменено') {
+                            approvalHtml = `<span style="color:#e74c3c; font-size:12px; font-weight:600;">Отклонено</span>`;
+                        } else {
+                            approvalHtml = `<span style="color:#27ae60; font-size:12px; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                Согласовано
+                            </span>`;
+                        }
+
+                        tbody.innerHTML += `
+                            <tr>
+                                <td style="font-weight: 500; color:#7f8c8d;">#${s.id}</td>
+                                <td><strong>Заказ #${s.order_id}</strong> (${s.order_product_type || ''})</td>
+                                <td><strong>${s.material_name || 'Неизвестен'}</strong></td>
+                                <td>${s.client_name || '—'}</td>
+                                <td>${s.quantity}</td>
+                                <td style="font-weight:600; color:#2c3e50;">${totalSum.toLocaleString('ru-RU')} ₽</td>
+                                <td><span class="badge ${badgeClass}">${s.status}</span></td>
+                                <td>${approvalHtml}</td>
+                            </tr>
+                        `;
+                    });
+                });
+        }
+
+        function approvePurchaseFromFinance(reqId) {
+            setFinanceStatus('Согласование закупки...', 'loading');
+            fetch(`/api/supply-requests/${reqId}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'согласовано' })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка согласования закупки');
+                return response.json();
+            })
+            .then(data => {
+                setFinanceStatus('Закупка успешно согласована!', 'success');
+                fetchFinancials();
+                loadFinancialSupplies();
+                fetchSupplyRequests(); // Синхронизируем исходную таблицу снабжения
+            })
+            .catch(error => {
+                setFinanceStatus(error.message, 'error');
+            });
+        }
+
+        function setFinanceStatus(msg, type) {
+            const el = document.getElementById('financeActionStatus');
+            if (!el) return;
+            el.textContent = msg;
+            el.className = 'action-status';
+            if (type === 'error') el.classList.add('error');
+            if (type === 'success') el.classList.add('success');
+            if (type === 'loading') el.classList.add('loading');
+            
+            if (type !== 'loading') {
+                setTimeout(() => {
+                    if (el.textContent === msg) el.textContent = '';
+                }, 4000);
+            }
+        }
+
+        // Запускаем загрузку лидов, клиентов, заказов, задач, снабжения и финансов
         fetchLeads();
         fetchClients();
         fetchOrders();
         fetchTasks();
         fetchSupplyRequests();
+
+        // Загрузка финансов
+        fetchFinancials();
+        loadFinancialOrders();
+        loadFinancialSupplies();
     </script>
 </body>
 </html>

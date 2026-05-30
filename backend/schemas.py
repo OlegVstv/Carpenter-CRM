@@ -1,5 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 from datetime import datetime, date
+from typing import List
 from models import LeadSource, LeadStatus, ClientStatus, OrderStatus, TaskPriority, TaskStatus, SupplyRequestStatus
 
 class LeadBase(BaseModel):
@@ -46,6 +47,23 @@ class ClientResponse(ClientBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+# --- Платежи (Срез №6) ---
+
+class PaymentBase(BaseModel):
+    amount: float
+    payment_date: date | None = None
+    comment: str | None = None
+
+class PaymentCreate(PaymentBase):
+    order_id: int
+
+class PaymentResponse(PaymentBase):
+    id: int
+    order_id: int
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
 # --- Заказы (Срез №3) ---
 
 class OrderBase(BaseModel):
@@ -68,6 +86,9 @@ class OrderResponse(OrderBase):
     paid_amount: float
     created_at: datetime
     client_name: str | None = None  # Опционально для удобства отображения на UI
+    remaining_balance: float
+    payment_status: str
+    payments: List[PaymentResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -151,5 +172,15 @@ class SupplyRequestResponse(SupplyRequestBase):
     client_name: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# --- Финансы (Срез №6) ---
+
+class FinancialSummaryResponse(BaseModel):
+    total_revenue: float
+    total_paid: float
+    total_debt: float
+    total_expenses: float
+    net_profit: float
 
 

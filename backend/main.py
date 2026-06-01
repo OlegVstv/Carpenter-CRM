@@ -399,5 +399,5 @@ def get_financials_summary(db: Session = Depends(get_db)):
 @app.get("/")
 def serve_frontend():
     # Путь относителен запуска из папки backend/
-    html_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "index.html")
+    html_path = os.path.join(os.path.dirname(__file__), "..", "frontend-old", "index.html")
     return FileResponse(html_path, headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"})
